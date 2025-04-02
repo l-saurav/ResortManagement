@@ -1,0 +1,57 @@
+﻿@{
+    ViewData["Title"] = "Create Villa Number";
+}
+@model VillaNumberViewModel
+
+<div class="w-100 card border-0 p-4">
+    <div class="card-header bg-success bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="text-white py-2">Add New Villa Number</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card-body border p-4">
+        <form method="post" class="row">
+            <div class="p-3">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="form-floating py-3 col-12">
+                    <input asp-for="villaNumber.Villa_Number" class="form-control border shadow" />
+                    <label asp-for="villaNumber.Villa_Number" class="ms-2"></label>
+                    <span asp-validation-for="villaNumber.Villa_Number" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-3 col-12">
+                    <select asp-for="@Model.villaNumber.VillaID" asp-items="@Model.villaList" class="form-select border shadow">
+                        <option disabled selected>--Select Villa--</option>
+                    </select>
+                    <label asp-for="villaNumber.VillaID" class="ms-2"></label>
+                    <span asp-validation-for="villaNumber.VillaID" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-3 col-12">
+                    <input asp-for="villaNumber.SpecialDetails" class="form-control border shadow" />
+                    <label asp-for="villaNumber.SpecialDetails" class="ms-2"></label>
+                    <span asp-validation-for="villaNumber.SpecialDetails" class="text-danger"></span>
+                </div>
+                <div class="row pt-2">
+                    <div class="col-6 col-md-3">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check-circle"></i> Create
+                        </button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a asp-controller="VillaNumber" asp-action="Index" class="btn btn-secondary w-100">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Client Side Validation to reduce unnecessary hitting on the database *@
+@section Scripts {
+    @{
+        <partial name="_ValidationScriptsPartial" />
+    }
+}
