@@ -30,13 +30,6 @@ namespace ResortManagementWeb.Controllers
         {
             //Retreiving all villa list with amenity in VillaList variable
             homeViewModel.VillaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity");
-            foreach(var villa in homeViewModel.VillaList)
-            {
-                if(villa.ID % 2 == 0 )
-                {
-                    villa.isAvailable = false;
-                }
-            }
             return View(homeViewModel);
         }
 
@@ -56,7 +49,7 @@ namespace ResortManagementWeb.Controllers
                 VillaList = villaList,
                 NoOfNight = nights
             };
-            return View(homeViewModel);
+            return PartialView("_VillaList",homeViewModel);
         }
 
         public IActionResult Privacy()
