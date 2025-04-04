@@ -36,7 +36,7 @@ namespace ResortManagement.Web.Controllers
             };
             return View(loginViewModel);
         }
-        public IActionResult Register()
+        public IActionResult Register(string returnURL = null)
         {
             if (!_roleManager.RoleExistsAsync(SD.Role_Admin).GetAwaiter().GetResult())
             {
@@ -49,7 +49,8 @@ namespace ResortManagement.Web.Controllers
                 {
                     Text = x.Name,
                     Value = x.Name
-                })
+                }),
+                RedirectURL = returnURL
             };
             return View(registerViewModel);
         }
