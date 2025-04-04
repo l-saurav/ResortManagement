@@ -25,6 +25,40 @@ namespace ResortManagementWeb.Controllers
             return View(homeViewModel);
         }
 
+        [HttpPost]
+        public IActionResult Index(HomeViewModel homeViewModel)
+        {
+            //Retreiving all villa list with amenity in VillaList variable
+            homeViewModel.VillaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity");
+            foreach(var villa in homeViewModel.VillaList)
+            {
+                if(villa.ID % 2 == 0 )
+                {
+                    villa.isAvailable = false;
+                }
+            }
+            return View(homeViewModel);
+        }
+
+        public IActionResult GetVillasByDate(int nights, DateOnly checkInDate)
+        {
+            var villaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity").ToList();
+            foreach (var villa in villaList)
+            {
+                if (villa.ID % 2 == 0)
+                {
+                    villa.isAvailable = false;
+                }
+            }
+            HomeViewModel homeViewModel = new()
+            {
+                CheckInDate = checkInDate,
+                VillaList = villaList,
+                NoOfNight = nights
+            };
+            return View(homeViewModel);
+        }
+
         public IActionResult Privacy()
         {
             return View();
