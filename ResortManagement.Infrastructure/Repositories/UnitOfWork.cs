@@ -8,6 +8,7 @@ namespace ResortManagement.Infrastructure.Repositories
         public IVillaRepository Villa { get; private set; }
         public IVillaNumberRepository VillaNumber { get; private set; }
         public IAmenityRepository Amenity { get; private set; }
+        public IBookingRepository Booking { get; private set; }
 
         private readonly ApplicationDBContext _dbContext;
         public UnitOfWork(ApplicationDBContext dBContext)
@@ -16,6 +17,7 @@ namespace ResortManagement.Infrastructure.Repositories
             Villa = new VillaRepository(_dbContext);
             VillaNumber = new VillaNumberRepository(_dbContext);
             Amenity = new AmenityRepository(_dbContext);
+            Booking = new BookingRepository(_dbContext);
         }
     }
 }
