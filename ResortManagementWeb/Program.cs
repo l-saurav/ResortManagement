@@ -4,6 +4,7 @@ using ResortManagement.Application.Common.Interfaces;
 using ResortManagement.Domain.Entities;
 using ResortManagement.Infrastructure.Data;
 using ResortManagement.Infrastructure.Repositories;
+using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,9 @@ builder.Services.Configure<IdentityOptions>(option =>
 });
 
 var app = builder.Build();
+
+//Add Stripe Configuration
+StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe:SecretKey").Get<String>();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

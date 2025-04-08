@@ -17,12 +17,13 @@
                 @if(Model.VillaAmenity is not null && Model.VillaAmenity.Count() >0 )
                 {
                     <p class="h5 text-white">Villa Amenities</p>
-                    <ul>
+                    <dl>
                         @foreach(var amenity in Model.VillaAmenity)
                         {
-                            <li>@amenity.Name</li>
+                            <dt>@amenity.Name</dt>
+                            <dd>@amenity.Description</dd>
                         }
-                    </ul>
+                    </dl>
                 }
             </div>
         </div>

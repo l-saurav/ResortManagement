@@ -1,8 +1,6 @@
-﻿using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ResortManagement.Application.Common.Interfaces;
 using ResortManagement.Web.Models;
-using ResortManagementWeb.Models;
 
 namespace ResortManagementWeb.Controllers
 {
@@ -26,13 +24,6 @@ namespace ResortManagementWeb.Controllers
         }
 
         [HttpPost]
-        public IActionResult Index(HomeViewModel homeViewModel)
-        {
-            //Retreiving all villa list with amenity in VillaList variable
-            homeViewModel.VillaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity");
-            return View(homeViewModel);
-        }
-
         public IActionResult GetVillasByDate(int nights, DateOnly checkInDate)
         {
             var villaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity").ToList();

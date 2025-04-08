@@ -21,20 +21,26 @@ namespace ResortManagement.Domain.Entities
         public string Name { get; set; }
 
         [Required]
+        [Display(Name ="Email Address")]
+        [EmailAddress]
         public string Email { get; set; }
 
+        [Display(Name="Phone Number")]
         public string? PhoneNumber { get; set; }
 
         [Required]
         public double TotalCost { get; set; }
+        [Display(Name="No. of Nights")]
         public int Nights { get; set; }
         public string? Status { get; set; }
 
         [Required]
         public DateTime BookingDate { get; set; }
         [Required]
+        [Display(Name="Check in Date")]
         public DateOnly CheckInDate { get; set; }
         [Required]
+        [Display(Name="Check out Date")]
         public DateOnly CheckOutDate { get; set; }
 
         public bool isPaymentSuccessful { get; set; } = false;

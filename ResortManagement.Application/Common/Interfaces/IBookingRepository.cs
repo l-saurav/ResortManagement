@@ -6,5 +6,7 @@ namespace ResortManagement.Application.Common.Interfaces
     {
         void Update(Booking booking);
         void Save();
+        void UpdateStatus(int bookingID, string bookingStatus);
+        void UpdateStripePaymentID(int id, string sessionId, string paymentIntentId);
     }
 }

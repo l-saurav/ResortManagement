@@ -34,7 +34,8 @@
                                 {
                                     if (villa.isAvailable)
                                     {
-                                        <a class="btn btn-success form-control btn-block">
+                                        <a asp-controller="Booking" asp-action="FinalizeBooking" 
+                                        asp-route-villaId="@villa.ID" asp-route-checkInDate="@Model.CheckInDate" asp-route-nights="@Model.NoOfNight" class="btn btn-success form-control btn-block">
                                             Book
                                         </a>
                                     }
