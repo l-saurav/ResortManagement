@@ -17,6 +17,7 @@ namespace ResortManagement.Web.Controllers
             _unitOfWork = unitOfWork;
         }
 
+        [Authorize]
         public IActionResult Index()
         {
             return View();
@@ -55,6 +56,20 @@ namespace ResortManagement.Web.Controllers
             booking.TotalCost = villa.Price * booking.Nights;
             booking.Status = SD.StatusPending;
             booking.BookingDate = DateTime.Now;
+            //Check if the villa is available
+            var villaNumberList = _unitOfWork.VillaNumber.GetAll().ToList();
+            var bookedVillas = _unitOfWork.Booking.GetAll(b => b.Status == SD.StatusApproved || b.Status == SD.StatusCheckedIn).ToList();
+            int roomAvailable = SD.VillaRoomsAvailable_Count(villa.ID, villaNumberList, booking.CheckInDate, booking.Nights, bookedVillas);
+            if(roomAvailable == 0)
+            {
+                TempData["error"] = "Room has been sold out!";
+                return RedirectToAction(nameof(FinalizeBooking), new
+                {
+                    villaId = booking.VillaID,
+                    checkInDate = booking.CheckInDate,
+                    nights = booking.Nights
+                });
+            }
             _unitOfWork.Booking.Add(booking);
             _unitOfWork.Booking.Save();
             //TempData["success"] = "Congrats! Villa has been booked!";
@@ -105,7 +120,7 @@ namespace ResortManagement.Web.Controllers
 
                 if(session.PaymentStatus == "paid")
                 {
-                    _unitOfWork.Booking.UpdateStatus(bookingFromDb.ID, SD.StatusApproved);
+                    _unitOfWork.Booking.UpdateStatus(bookingFromDb.ID, SD.StatusApproved,0);
                     _unitOfWork.Booking.UpdateStripePaymentID(bookingFromDb.ID, session.Id, session.PaymentIntentId);
                     _unitOfWork.Booking.Save();
                 }
@@ -113,5 +128,99 @@ namespace ResortManagement.Web.Controllers
 
             return View(bookingId);
         }
+
+        [Authorize]
+        public IActionResult BookingDetails(int bookingId)
+        {
+            // Retrieve the booking details with related User and Villa
+            Booking bookingDetail = _unitOfWork.Booking.Get(b => b.ID == bookingId, includeProperties: "User,Villa");
+
+            // Check if the booking is approved and no villa number is assigned
+            if (bookingDetail.VillaNumber == 0 && bookingDetail.Status == SD.StatusApproved)
+            {
+                // Fetch available villa numbers for the specific villa
+                var availableVillaNumber = AssignAvailableVillaNumberByVilla(bookingDetail.VillaID);
+
+                // Filter villa numbers in memory
+                var allVillaNumbers = _unitOfWork.VillaNumber.GetAll(vn => vn.VillaID == bookingDetail.VillaID).ToList();
+                bookingDetail.villaNumbers = allVillaNumbers
+                    .Where(vn => availableVillaNumber.Contains(vn.Villa_Number))
+                    .ToList();
+            }
+
+            return View(bookingDetail);
+        }
+        private List<int> AssignAvailableVillaNumberByVilla (int villaId)
+        {
+            List<int> availableVillaNumbers = new();
+            var villaNumbers = _unitOfWork.VillaNumber.GetAll(vn => vn.VillaID == villaId);
+            var checkedInVilla = _unitOfWork.Booking.GetAll(vn => vn.VillaID == villaId && vn.Status == SD.StatusCheckedIn)
+                .Select(vn => vn.VillaNumber);
+            foreach(var villaNumber in villaNumbers)
+            {
+                if (!checkedInVilla.Contains(villaNumber.Villa_Number))
+                {
+                    availableVillaNumbers.Add(villaNumber.Villa_Number);
+                }
+            }
+            return availableVillaNumbers;
+        }
+
+        [HttpPost]
+        [Authorize(Roles =SD.Role_Admin)]
+        public IActionResult CheckIn(Booking booking)
+        {
+            _unitOfWork.Booking.UpdateStatus(booking.ID, SD.StatusCheckedIn, booking.VillaNumber);
+            _unitOfWork.Booking.Save();
+            TempData["success"] = "Booking Status Updated to Checked In!";
+            return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.ID });
+        }
+
+        [HttpPost]
+        [Authorize(Roles = SD.Role_Admin)]
+        public IActionResult CheckOut(Booking booking)
+        {
+            _unitOfWork.Booking.UpdateStatus(booking.ID, SD.StatusCheckedOut, booking.VillaNumber);
+            _unitOfWork.Booking.Save();
+            TempData["success"] = "Booking Status Updated to Check Out!";
+            return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.ID });
+        }
+
+        [HttpPost]
+        [Authorize(Roles = SD.Role_Admin)]
+        public IActionResult CancelBooking(Booking booking)
+        {
+            _unitOfWork.Booking.UpdateStatus(booking.ID, SD.StatusCancelled, 0);
+            _unitOfWork.Booking.Save();
+            TempData["success"] = "Booking Status updated to Cancelled!";
+            return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.ID });
+        }
+
+        #region API Calls
+        [HttpGet]
+        [Authorize]
+        public IActionResult GetAll(string status)
+        {
+            IEnumerable<Booking> bookingObject;
+            if (User.IsInRole(SD.Role_Admin))
+            {
+                bookingObject = _unitOfWork.Booking.GetAll(includeProperties: "User,Villa");
+            }
+            else
+            {
+                //Get logged in User ID
+                var claimsIdentity = (ClaimsIdentity)User.Identity;
+                var userID = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+                //Get all the Booking specific to the user
+                bookingObject = _unitOfWork.Booking.GetAll(b => b.UserID == userID, includeProperties: "User,Villa");
+            }
+            if (!string.IsNullOrEmpty(status))
+            {
+                bookingObject = bookingObject.Where(b => b.Status.ToLower().Equals(status.ToLower()));
+            }
+            return Json(new { data = bookingObject });
+        }
+        #endregion
     }
 }
