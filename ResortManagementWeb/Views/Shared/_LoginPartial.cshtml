@@ -9,19 +9,31 @@
     @if(SignInManager.IsSignedIn(User))
     {
         <li class="nav-item">
-            <a class="nav-link" href="#">Hello, @UserManager.GetUserName(User)</a>
+            <a class="nav-link" href="#">
+                <span class="me-2"> <i class="bi bi-person"></i></span>
+                <span>Hello, @UserManager.GetUserName(User)</span>
+            </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" asp-controller="Account" asp-action="Logout">Logout</a>
+            <a class="nav-link" asp-controller="Account" asp-action="Logout">
+                <span class="me-2"><i class="bi bi-box-arrow-left"></i></span>
+                <span>Logout</span>
+            </a>
         </li>
     }
     else
     {
         <li class="nav-item">
-            <a class="nav-link" asp-controller="Account" asp-action="Register">Register</a>
+            <a class="nav-link" asp-controller="Account" asp-action="Register">
+                <span class="me-2"> <i class="bi bi-person-add"></i></span>
+                <span>Register</span>
+            </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" asp-controller="Account" asp-action="Login">Login</a>
+            <a class="nav-link" asp-controller="Account" asp-action="Login">
+                <span class="me-2"><i class="bi bi-box-arrow-in-right"></i></span>
+                <span>Login</span>
+            </a>
         </li>
     }
 </ul>

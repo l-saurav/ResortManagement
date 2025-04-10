@@ -11,12 +11,13 @@
     <link rel="stylesheet" href="~/ResortManagementWeb.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/Spinner.css" style="display:none"/>
     <link rel="stylesheet" href="//cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css"/>
+    <link rel="stylesheet" href="~/css/apexcharts.css"/>
 </head>
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light border-bottom box-shadow">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index"><img src="~/images/resorticon.svg" style="width:35px"/></a>
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index"><img src="~/images/resorticon.png" style="width:35px"/></a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                 aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -24,7 +25,10 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                                <span class="me-2"><i class="bi bi-houses"></i></span>
+                                <span>Home</span>
+                            </a>
                         </li>
                         @if (User.IsInRole(SD.Role_Admin))
                         {
@@ -44,7 +48,10 @@
                         else
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Booking" asp-action="Index">Manage Bookings</a>
+                                <a class="nav-link" asp-controller="Booking" asp-action="Index" asp-route-status="@SD.StatusPending">
+                                    <span class="me-2"> <i class="bi bi-file-break"></i></span>
+                                    <span>Manage Booking</span>
+                                </a>
                             </li>
                         }
                     </ul>
@@ -71,6 +78,7 @@
     @* <script src="~/js/bootstrap.min.js"></script> *@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="//cdn.datatables.net/2.2.2/js/dataTables.min.js" asp-append-version="true"></script>
+    <script src="~/js/apexcharts.js" asp-append-version="true"></script>
     @* jquery-ajax-unobtrusive@3.2.6 *@
     @* <script src="~/jquery-ajax-unobtrusive/dist/jquery.unobtrusive-ajax.min.js"></script> *@
     @await RenderSectionAsync("Scripts", required: false)

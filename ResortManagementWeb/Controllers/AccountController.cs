@@ -127,13 +127,21 @@ namespace ResortManagement.Web.Controllers
                 if (result.Succeeded)
                 {
                     TempData["success"] = "Congrats! You have been successfully logged in";
-                    if (string.IsNullOrEmpty(loginViewModel.RedirectURL))
+                    var user = await _userManager.FindByEmailAsync(loginViewModel.Email);
+                    if(await _userManager.IsInRoleAsync(user,SD.Role_Admin))
                     {
-                        return RedirectToAction("Index", "Home");
+                        return RedirectToAction("Index", "Dashboard");
                     }
                     else
                     {
-                        return LocalRedirect(loginViewModel.RedirectURL);
+                        if (string.IsNullOrEmpty(loginViewModel.RedirectURL))
+                        {
+                            return RedirectToAction("Index", "Home");
+                        }
+                        else
+                        {
+                            return LocalRedirect(loginViewModel.RedirectURL);
+                        }
                     }
                 }
                 else
