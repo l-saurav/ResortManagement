@@ -13,6 +13,10 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.3" />
     <PackageReference Include="Stripe.net" Version="48.0.0" />
+    <PackageReference Include="Syncfusion.DocIO.Net.Core" Version="29.1.38" />
+    <PackageReference Include="Syncfusion.DocIORenderer.Net.Core" Version="29.1.38" />
+    <PackageReference Include="Syncfusion.Licensing" Version="29.1.38" />
+    <PackageReference Include="Syncfusion.Presentation.Net.Core" Version="29.1.38" />
     <PackageReference Include="toastr" Version="2.1.1" />
   </ItemGroup>
 
@@ -22,6 +26,7 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\images\VillaImage\" />
+    <Folder Include="wwwroot\exports\" />
   </ItemGroup>
 
 </Project>

@@ -5,6 +5,7 @@ using ResortManagement.Domain.Entities;
 using ResortManagement.Infrastructure.Data;
 using ResortManagement.Infrastructure.Repositories;
 using Stripe;
+using Syncfusion.Licensing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,8 @@ var app = builder.Build();
 
 //Add Stripe Configuration
 StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe:SecretKey").Get<String>();
+//Add Syncfusion Configuration for document processing
+SyncfusionLicenseProvider.RegisterLicense(builder.Configuration.GetSection("Syncfusion:LicenseKey").Get<String>());
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

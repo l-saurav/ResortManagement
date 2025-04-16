@@ -4,17 +4,23 @@ using ResortManagement.Application.Common.Interfaces;
 using ResortManagement.Application.Common.Utility;
 using ResortManagement.Domain.Entities;
 using Stripe.Checkout;
-using Stripe;
 using System.Security.Claims;
+using Syncfusion.DocIO.DLS;
+using Syncfusion.DocIO;
+using Syncfusion.DocIORenderer;
+using Syncfusion.Drawing;
+using Syncfusion.Pdf;
 
 namespace ResortManagement.Web.Controllers
 {
     public class BookingController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
-        public BookingController(IUnitOfWork unitOfWork)
+        private readonly IWebHostEnvironment _webHostEnvironment;
+        public BookingController(IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
         {
             _unitOfWork = unitOfWork;
+            _webHostEnvironment = webHostEnvironment;
         }
 
         [Authorize]
@@ -150,6 +156,132 @@ namespace ResortManagement.Web.Controllers
 
             return View(bookingDetail);
         }
+
+        [HttpPost]
+        [Authorize]
+        public IActionResult GenerateInvoice(int id, string downloadType)
+        {
+            
+            string basePath = _webHostEnvironment.WebRootPath; //Get the base path
+            WordDocument wordDocument = new WordDocument(); //Create a new word document
+            string dataPath = basePath + @"/exports/BookingDetails.docx"; //Path to load the template
+            using FileStream fileStream = new FileStream(dataPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            wordDocument.Open(fileStream, FormatType.Automatic);
+            //Update the template
+            Booking bookingFromDb = _unitOfWork.Booking.Get(u => u.ID == id, includeProperties: "User,Villa");
+            //Username
+            TextSelection textSelection = wordDocument.Find("xx_customer_name", false, true);
+            WTextRange textRange = textSelection.GetAsOneRange();
+            textRange.Text = bookingFromDb.Name;
+            //Phone Number
+            textSelection = wordDocument.Find("xx_customer_phone", false, true);
+            textRange = textSelection.GetAsOneRange();
+            textRange.Text = bookingFromDb.PhoneNumber;
+            //Email Address
+            textSelection = wordDocument.Find("xx_customer_email", false, true);
+            textRange = textSelection.GetAsOneRange();
+            textRange.Text = bookingFromDb.Email;
+            //Payment Date
+            textSelection = wordDocument.Find("xx_payment_date", false, true);
+            textRange = textSelection.GetAsOneRange();
+            textRange.Text = bookingFromDb.PaymentDate.ToShortDateString();
+            //Checkin Date
+            textSelection = wordDocument.Find("xx_checkin_date", false, true);
+            textRange = textSelection.GetAsOneRange();
+            textRange.Text = bookingFromDb.CheckInDate.ToShortDateString();
+            //Checkout Date
+            textSelection = wordDocument.Find("xx_checkout_date", false, true);
+            textRange = textSelection.GetAsOneRange();
+            textRange.Text = bookingFromDb.CheckOutDate.ToShortDateString();
+            //Booking Total Amount
+            textSelection = wordDocument.Find("xx_booking_total", false, true);
+            textRange = textSelection.GetAsOneRange();
+            textRange.Text = bookingFromDb.TotalCost.ToString("c");
+            //Booking Number
+            textSelection = wordDocument.Find("XX_BOOKING_NUMBER", false, true);
+            textRange = textSelection.GetAsOneRange();
+            textRange.Text = "Booking Number: " + bookingFromDb.ID;
+            //Booking Date
+            textSelection = wordDocument.Find("XX_BOOKING_DATE", false, true);
+            textRange = textSelection.GetAsOneRange();
+            textRange.Text = "Booking Date: " + bookingFromDb.BookingDate.ToShortDateString();
+
+            //Creating table and adding it to the word file
+            WTable table = new(wordDocument);
+            table.TableFormat.Borders.LineWidth = 1f;
+            table.TableFormat.Borders.Color = Color.Black;
+            table.TableFormat.Paddings.Top = 7f;
+            table.TableFormat.Paddings.Bottom = 7f;
+            table.TableFormat.Borders.Horizontal.LineWidth = 1f;
+            //Define rows and column you will be having
+            int rows = bookingFromDb.VillaNumber > 0 ? 3 : 2; //Checking if the user have been assigned villa number(Checked-In Status)
+            table.ResetCells(rows, 4);
+            //Work on individual row
+            WTableRow row0 = table.Rows[0];
+            //Table header
+            row0.Cells[0].AddParagraph().AppendText("Nights");
+            row0.Cells[0].Width = 80;
+            row0.Cells[1].AddParagraph().AppendText("Villa");
+            row0.Cells[1].Width = 220;
+            row0.Cells[2].AddParagraph().AppendText("Price per Night");
+            row0.Cells[3].AddParagraph().AppendText("Total");
+            row0.Cells[3].Width = 80;
+            //Table Data
+            WTableRow row1 = table.Rows[1];
+            row1.Cells[0].AddParagraph().AppendText(bookingFromDb.Nights.ToString());
+            row1.Cells[0].Width = 80;
+            row1.Cells[1].AddParagraph().AppendText(bookingFromDb.Villa.Name);
+            row1.Cells[1].Width = 220;
+            row1.Cells[2].AddParagraph().AppendText(bookingFromDb.Villa.Price.ToString("c"));
+            row1.Cells[3].AddParagraph().AppendText(bookingFromDb.TotalCost.ToString("c"));
+            row1.Cells[3].Width = 80;
+            if (rows > 2)
+            {
+
+                WTableRow row2 = table.Rows[2];
+                row2.Cells[0].Width = 80;
+                row2.Cells[1].AddParagraph().AppendText("Villa Number: "+bookingFromDb.VillaNumber.ToString());
+                row2.Cells[1].Width = 220;
+                row2.Cells[3].Width = 80;
+            }
+            //Add Custom Design into the table
+            WTableStyle tableStyle = wordDocument.AddTableStyle("CustomStyle") as WTableStyle;
+            tableStyle.TableProperties.RowStripe = 1;
+            tableStyle.TableProperties.ColumnStripe = 2;
+            tableStyle.TableProperties.Paddings.Top = 2;
+            tableStyle.TableProperties.Paddings.Bottom = 1;
+            tableStyle.TableProperties.Paddings.Left = 5.4f;
+            tableStyle.TableProperties.Paddings.Right = 5.4f;
+            //Add style only on the heading of the table
+            ConditionalFormattingStyle firstRowStyle = tableStyle.ConditionalFormattingStyles.Add(ConditionalFormattingType.FirstRow);
+            firstRowStyle.CharacterFormat.Bold = true;
+            firstRowStyle.CharacterFormat.TextColor = Color.FromArgb(255, 255, 255, 255);
+            firstRowStyle.CellProperties.BackColor = Color.Black;
+            table.ApplyStyle("CustomStyle");
+            //Add created table on the document
+            TextBodyPart bodyPart = new(wordDocument);
+            bodyPart.BodyItems.Add(table);
+            wordDocument.Replace("<ADDTABLEHERE>", bodyPart, false, false);
+
+
+            //Save the updated into the file
+            using DocIORenderer docIORenderer = new();
+            MemoryStream stream = new();
+            if (downloadType == "word")
+            {
+                wordDocument.Save(stream, FormatType.Docx);
+                stream.Position = 0;
+                return File(stream, "application/docx", "BookingDetails.docx");
+            }
+            else
+            {
+                PdfDocument pdfDocument = docIORenderer.ConvertToPDF(wordDocument);
+                pdfDocument.Save(stream);
+                stream.Position = 0;
+                return File(stream, "application/pdf", "BookingDetails.pdf");
+            }
+        }
+
         private List<int> AssignAvailableVillaNumberByVilla (int villaId)
         {
             List<int> availableVillaNumbers = new();

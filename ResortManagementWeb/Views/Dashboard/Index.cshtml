@@ -4,5 +4,140 @@
 @{
     ViewData["Title"] = "Admin Dashboard!";
 }
+<div class="container-fluid">
+    <div class="row">
+        <div class="page-title-box d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">Dashboard</h4>
+        </div>
+    </div>
+    <div class="row">
+        @* Radial Chart for Booking *@
+        <div class="col-md-6 col-xl-4 mt-2 ">
+            <div class="card justify-content-between">
+                <div class="card-body">
+                    <div class="float-end" style="width:100px;">
+                        <div id="totalBookingsRadialChart" data-colors='["--bs-success"]'>
+                            @* Radial Chart *@
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-0">Total Bookings</p>
+                        <h4 class="my-1">
+                            <span id="spanTotalBookingCount">
+                                @* XX *@
+                            </span>
+                        </h4>
+                    </div>
+                    <p class="text-muted mt-3 mb-0" id="sectionBookingCount">
+                        @* Count *@
+                    </p>
+                    <div class="justify-content-center text-center chart-spinner" style="display:none">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @* Radial Chart for Users *@
+        <div class="col-md-6 col-xl-4 mt-2 ">
+            <div class="card justify-content-between">
+                <div class="card-body">
+                    <div class="float-end" style="width:100px;">
+                        <div id="totalUsersRadialChart" data-colors='["--bs-warning"]'>
+                            @* Radial Chart *@
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-0">Total Users</p>
+                        <h4 class="my-1">
+                            <span id="spanTotalUsersCount">
+                                @* XX *@
+                            </span>
+                        </h4>
+                    </div>
+                    <p class="text-muted mt-3 mb-0" id="sectionUsersCount">
+                        @* Count *@
+                    </p>
+                    <div class="justify-content-center text-center chart-spinner" style="display:none">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @* Radial Chart for Revenue *@
+        <div class="col-md-6 col-xl-4 mt-2 ">
+            <div class="card justify-content-between">
+                <div class="card-body">
+                    <div class="float-end" style="width:100px;">
+                        <div id="totalRevenueRadialChart" data-colors='["--bs-danger"]'>
+                            @* Radial Chart *@
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-muted mb-0">Total Revenue</p>
+                        <h4 class="my-1">
+                            <span id="spanTotalRevenueCount">
+                                @* XX *@
+                            </span>
+                        </h4>
+                    </div>
+                    <p class="text-muted mt-3 mb-0" id="sectionRevenueCount">
+                        @* Count *@
+                    </p>
+                    <div class="justify-content-center text-center chart-spinner" style="display:none">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @* Chart for New Booking and New Members*@
+        <div class="col-md-12 col-xl-8 mt-2 ">
+            <div class="card justify-content-between">
+                <div class="card-body">
+                    <div>
+                        <p class="text-muted mb-0">New Members and Bookings in Past 30 days</p>
+                    </div>
+                    <div id="newMembersAndBookingLineChart" data-colors='["--bs-warning","--bs-primary"]'>
+                    </div>
+                    <div class="justify-content-center text-center chart-spinner" style="display:none">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @* Pie Chart for Customer Booking *@
+        <div class="col-md-12 col-xl-4 mt-2 ">
+            <div class="card justify-content-between">
+                <div class="card-body">
+                    <div class="" >
+                        <p class="text-muted mb-0">Customer Booking</p>
+                    </div>
+                    <div id="customerBookingsPieChart" data-colors='["--bs-warning","--bs-primary"]'>
+                        @* Customer Pie Chart *@
+                    </div>
+                    <div class="justify-content-center text-center chart-spinner" style="display:none">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-<h2> Admin Dashboard </h2>
+@section scripts{
+    <script src="~/js/Booking/radialChart.js"></script>
+    <script src="~/js/Booking/getTotalBookingRadialChart.js"></script>
+    <script src="~/js/Booking/getTotalUsersRadialChart.js"></script>
+    <script src="~/js/Booking/getTotalRevenueRadialChart.js"></script>
+    <script src="~/js/Booking/getCustometBookingPieChart.js"></script>
+    <script src="~/js/Booking/getMemberAndCustomerLineChart.js"></script>
+}
