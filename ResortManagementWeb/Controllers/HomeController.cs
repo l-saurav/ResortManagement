@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using ResortManagement.Application.Common.Interfaces;
 using ResortManagement.Application.Common.Utility;
+using ResortManagement.Application.Services.Interface;
 using ResortManagement.Web.Models;
 using Syncfusion.Presentation;
 
@@ -8,11 +9,11 @@ namespace ResortManagementWeb.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IVillaService _villaService;
         private readonly IWebHostEnvironment _webHostEnvironment; //To get access to the root file
-        public HomeController(IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
+        public HomeController(IVillaService villaService, IWebHostEnvironment webHostEnvironment)
         {
-            _unitOfWork = unitOfWork;
+            _villaService = villaService;
             _webHostEnvironment = webHostEnvironment;
         }
 
@@ -20,7 +21,7 @@ namespace ResortManagementWeb.Controllers
         {
             HomeViewModel homeViewModel = new()
             {
-                VillaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity"),
+                VillaList = _villaService.GetAllVillas(),
                 CheckInDate = DateOnly.FromDateTime(DateTime.Now),
                 NoOfNight = 1
             };
@@ -30,18 +31,11 @@ namespace ResortManagementWeb.Controllers
         [HttpPost]
         public IActionResult GetVillasByDate(int nights, DateOnly checkInDate)
         {
-            var villaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity").ToList();
-            var villaNumberList = _unitOfWork.VillaNumber.GetAll().ToList();
-            var bookedVillas = _unitOfWork.Booking.GetAll(b => b.Status == SD.StatusApproved || b.Status == SD.StatusCheckedIn).ToList();
-            foreach (var villa in villaList)
-            {
-                int roomAvailable = SD.VillaRoomsAvailable_Count(villa.ID, villaNumberList, checkInDate, nights, bookedVillas);
-                villa.isAvailable = roomAvailable > 0 ? true : false;
-            }
+
             HomeViewModel homeViewModel = new()
             {
                 CheckInDate = checkInDate,
-                VillaList = villaList,
+                VillaList = _villaService.GetVillasAvailabilityByDate(nights,checkInDate),
                 NoOfNight = nights
             };
             return PartialView("_VillaList",homeViewModel);
@@ -49,7 +43,7 @@ namespace ResortManagementWeb.Controllers
         [HttpPost]
         public IActionResult GeneratePPTExport(int id)
         {
-            var villa = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity").FirstOrDefault(v => v.ID == id);
+            var villa = _villaService.GetAllVillas().FirstOrDefault(v => v.ID == id);
             if(villa is null)
             {
                 return RedirectToAction(nameof(Error));

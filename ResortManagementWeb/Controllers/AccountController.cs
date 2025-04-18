@@ -11,16 +11,13 @@ namespace ResortManagement.Web.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-        public AccountController(IUnitOfWork unitOfWork,
-            SignInManager<ApplicationUser> signInManager, 
+        public AccountController(SignInManager<ApplicationUser> signInManager, 
             UserManager<ApplicationUser> userManager, 
             RoleManager<IdentityRole> roleManager)
         {
-            _unitOfWork = unitOfWork;
             _signInManager = signInManager;
             _userManager = userManager;
             _roleManager = roleManager;
@@ -38,11 +35,8 @@ namespace ResortManagement.Web.Controllers
         }
         public IActionResult Register(string returnURL = null)
         {
-            if (!_roleManager.RoleExistsAsync(SD.Role_Admin).GetAwaiter().GetResult())
-            {
-                _roleManager.CreateAsync(new IdentityRole(SD.Role_Admin)).Wait();
-                _roleManager.CreateAsync(new IdentityRole(SD.Role_Customer)).Wait();
-            }
+            //Check if returnURL is null; if not empty it will populate that with the content 
+            returnURL ??= Url.Content("~/");
             RegisterViewModel registerViewModel = new()
             {
                 RoleList = _roleManager.Roles.Select(x => new SelectListItem

@@ -1,6 +1,7 @@
 ﻿//Class to save static detail
 
 using ResortManagement.Domain.Entities;
+using ResortManagement.Web.Models;
 
 namespace ResortManagement.Application.Common.Utility
 {
@@ -54,6 +55,24 @@ namespace ResortManagement.Application.Common.Utility
                 }
             }
             return finalAvailableRoomForAllNights;
+        }
+
+
+        public static RadialBarChartDTO GetRadialChartDataModel(int totalCount, double currentMonthCount, double previousMonthCount)
+        {
+            //Populate Radial Bar Chart View Model
+            RadialBarChartDTO RadialBarChartDTO = new();
+            int increaseDecreaseRatio = 100;
+            //Only calculate ratio if there is any previous month record to skip exception
+            if (previousMonthCount != 0)
+            {
+                increaseDecreaseRatio = Convert.ToInt32((((double)currentMonthCount - previousMonthCount) / previousMonthCount) * 100);
+            }
+            RadialBarChartDTO.TotalCount = totalCount;
+            RadialBarChartDTO.IncreaseDecreaseAmount = Convert.ToInt32(currentMonthCount - previousMonthCount);
+            RadialBarChartDTO.HasRatioIncreased = currentMonthCount > previousMonthCount;
+            RadialBarChartDTO.Series = new int[] { increaseDecreaseRatio };
+            return RadialBarChartDTO;
         }
     }
 }

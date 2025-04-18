@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using ResortManagement.Application.Common.Interfaces;
 using ResortManagement.Application.Common.Utility;
+using ResortManagement.Application.Services.Interface;
 using ResortManagement.Domain.Entities;
 using ResortManagement.Web.Models;
 
@@ -12,22 +13,24 @@ namespace ResortManagement.Web.Controllers
     [Authorize(Roles =SD.Role_Admin)]
     public class AmenityController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
-        public AmenityController(IUnitOfWork unitOfWork)
+        private IAmenityService _amenityService;
+        private IVillaService _villaService;
+        public AmenityController(IAmenityService amenityService, IVillaService villaService)
         {
-            _unitOfWork = unitOfWork;
+            _amenityService = amenityService;
+            _villaService = villaService;
         }
 
         public IActionResult Index()
         {
-            var amenities = _unitOfWork.Amenity.GetAll(includeProperties: "villa").OrderBy(a => a.villaID);
+            var amenities = _amenityService.GetAllAmenities().OrderBy(a => a.villaID);
             return View(amenities);
         }
         public IActionResult Create()
         {
             AmenityViewModel amenityViewModel = new()
             {
-                villaList = _unitOfWork.Villa.GetAll().Select(v => new SelectListItem
+                villaList = _villaService.GetAllVillas().Select(v => new SelectListItem
                 {
                     Text = v.Name,
                     Value = v.ID.ToString()
@@ -38,11 +41,10 @@ namespace ResortManagement.Web.Controllers
         [HttpPost]
         public IActionResult Create(AmenityViewModel amenityViewModel)
         {
-            bool amenityExistCheck = _unitOfWork.Amenity.Any(a => a.ID == amenityViewModel.amenity.ID);
+            bool amenityExistCheck = _amenityService.CheckAmenityExists(amenityViewModel.amenity.ID);
             if (ModelState.IsValid && !amenityExistCheck)
             {
-                _unitOfWork.Amenity.Add(amenityViewModel.amenity);
-                _unitOfWork.Amenity.Save();
+                _amenityService.CreateAmenity(amenityViewModel.amenity);
                 TempData["success"] = "New Amenity has been added Successfully!";
                 return RedirectToAction(nameof(Index));
             }
@@ -50,7 +52,7 @@ namespace ResortManagement.Web.Controllers
             {
                 TempData["error"] = "Sorry! There already exist same villa Number";
             }
-            amenityViewModel.villaList = _unitOfWork.Villa.GetAll().Select(v => new SelectListItem
+            amenityViewModel.villaList = _amenityService.GetAllAmenities().Select(v => new SelectListItem
             {
                 Text = v.Name,
                 Value = v.ID.ToString()
@@ -62,12 +64,12 @@ namespace ResortManagement.Web.Controllers
         {
             AmenityViewModel amenityViewModel = new()
             {
-                villaList = _unitOfWork.Villa.GetAll().Select(v => new SelectListItem
+                villaList = _villaService.GetAllVillas().Select(v => new SelectListItem
                 {
                     Text = v.Name,
                     Value = v.ID.ToString()
                 }),
-                amenity = _unitOfWork.Amenity.Get(a => a.ID == amenityID)
+                amenity = _amenityService.GetAmenityById(amenityID)
             };
             if (amenityViewModel.amenity is null)
             {
@@ -80,8 +82,7 @@ namespace ResortManagement.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                _unitOfWork.Amenity.Update(amenity);
-                _unitOfWork.Amenity.Save();
+                _amenityService.UpdateAmenity(amenity);
                 TempData["success"] = "The Amenity has been successfully updated!";
                 return RedirectToAction(nameof(Index));
             }
@@ -92,12 +93,12 @@ namespace ResortManagement.Web.Controllers
         {
             AmenityViewModel amenityViewModel = new()
             {
-                villaList = _unitOfWork.Villa.GetAll().Select(v => new SelectListItem
+                villaList = _villaService.GetAllVillas().Select(v => new SelectListItem
                 {
                     Text = v.Name,
                     Value = v.ID.ToString()
                 }),
-                amenity = _unitOfWork.Amenity.Get(a => a.ID == amenityID)
+                amenity = _amenityService.GetAmenityById(amenityID)
             };
             if (amenityViewModel.amenity is null)
             {
@@ -109,16 +110,16 @@ namespace ResortManagement.Web.Controllers
         [HttpPost]
         public IActionResult Delete(AmenityViewModel amenityViewModel)
         {
-            Amenity? amenityToDelete = _unitOfWork.Amenity.Get(a => a.ID == amenityViewModel.amenity.ID);
-            if (amenityViewModel is not null)
+            if (_amenityService.DeleteAmenity(amenityViewModel.amenity.ID))
             {
-                _unitOfWork.Amenity.Delete(amenityToDelete);
-                _unitOfWork.Amenity.Save();
                 TempData["success"] = "Amenity has been successfully deleted!";
                 return RedirectToAction(nameof(Index));
             }
-            TempData["error"] = "Sorry! Unable to delete the Amenity";
-            return View();
+            else
+            {
+                TempData["error"] = "Sorry! Unable to delete the Amenity";
+                return View();
+            }
         }
     }
 }

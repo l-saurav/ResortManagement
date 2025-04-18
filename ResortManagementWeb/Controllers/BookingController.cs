@@ -1,25 +1,38 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using ResortManagement.Application.Common.Interfaces;
 using ResortManagement.Application.Common.Utility;
+using ResortManagement.Application.Services.Interface;
 using ResortManagement.Domain.Entities;
+using ResortManagement.Infrastructure.Repositories;
 using Stripe.Checkout;
-using System.Security.Claims;
-using Syncfusion.DocIO.DLS;
 using Syncfusion.DocIO;
+using Syncfusion.DocIO.DLS;
 using Syncfusion.DocIORenderer;
 using Syncfusion.Drawing;
 using Syncfusion.Pdf;
+using System.Security.Claims;
 
 namespace ResortManagement.Web.Controllers
 {
     public class BookingController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IVillaService _villaService;
+        private readonly IVillaNumberService _villaNumberService;
+        private readonly IBookingService _bookingService;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        public BookingController(IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
+        public BookingController(IVillaService villaService,
+            IVillaNumberService villaNumberService,
+            IBookingService bookingService,
+            UserManager<ApplicationUser> userManager,
+            IWebHostEnvironment webHostEnvironment)
         {
-            _unitOfWork = unitOfWork;
+            _villaService = villaService;
+            _villaNumberService = villaNumberService;
+            _bookingService = bookingService;
+            _userManager = userManager;
             _webHostEnvironment = webHostEnvironment;
         }
 
@@ -36,12 +49,12 @@ namespace ResortManagement.Web.Controllers
             var claimsIdentity = (ClaimsIdentity)User.Identity;
             var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
             //Now retrieve the information of the User
-            var applicationUser = _unitOfWork.ApplicationUser.Get(au => au.Id == userId);
+            var applicationUser = _userManager.FindByIdAsync(userId).GetAwaiter().GetResult(); // Calling GetAwaiter as it is an async endpoint
 
             Booking booking = new()
             {
                 VillaID = villaID,
-                Villa = _unitOfWork.Villa.Get(u => u.ID == villaID, includeProperties: "VillaAmenity"),
+                Villa = _villaService.GetVillaById(villaID),
                 CheckInDate = checkInDate,
                 Nights = nights,
                 CheckOutDate = checkInDate.AddDays(nights),
@@ -58,15 +71,12 @@ namespace ResortManagement.Web.Controllers
         [HttpPost]
         public IActionResult FinalizeBooking(Booking booking)
         {
-            var villa = _unitOfWork.Villa.Get(v => v.ID == booking.VillaID);
+            var villa = _villaService.GetVillaById(booking.VillaID);
             booking.TotalCost = villa.Price * booking.Nights;
             booking.Status = SD.StatusPending;
             booking.BookingDate = DateTime.Now;
             //Check if the villa is available
-            var villaNumberList = _unitOfWork.VillaNumber.GetAll().ToList();
-            var bookedVillas = _unitOfWork.Booking.GetAll(b => b.Status == SD.StatusApproved || b.Status == SD.StatusCheckedIn).ToList();
-            int roomAvailable = SD.VillaRoomsAvailable_Count(villa.ID, villaNumberList, booking.CheckInDate, booking.Nights, bookedVillas);
-            if(roomAvailable == 0)
+            if(!_villaService.isVillaAvailableByDate(villa.ID,booking.Nights,booking.CheckInDate))
             {
                 TempData["error"] = "Room has been sold out!";
                 return RedirectToAction(nameof(FinalizeBooking), new
@@ -76,8 +86,7 @@ namespace ResortManagement.Web.Controllers
                     nights = booking.Nights
                 });
             }
-            _unitOfWork.Booking.Add(booking);
-            _unitOfWork.Booking.Save();
+            _bookingService.CreateBooking(booking);
             //TempData["success"] = "Congrats! Villa has been booked!";
 
             //Stripe Processing
@@ -106,8 +115,7 @@ namespace ResortManagement.Web.Controllers
             var service = new Stripe.Checkout.SessionService();
             Stripe.Checkout.Session session = service.Create(options);
             //Save session ID in the database
-            _unitOfWork.Booking.UpdateStripePaymentID(booking.ID, session.Id, session.PaymentIntentId);
-            _unitOfWork.Booking.Save();
+            _bookingService.UpdateStripePaymentID(booking.ID, session.Id, session.PaymentIntentId);
 
             Response.Headers.Add("Location", session.Url);
             return new StatusCodeResult(303);
@@ -117,7 +125,7 @@ namespace ResortManagement.Web.Controllers
         public IActionResult BookingConfirmation(int bookingId)
         {
             //Retrieve the stored stripe session ID and check if the payment was successful or not
-            Booking bookingFromDb = _unitOfWork.Booking.Get(b => b.ID == bookingId, includeProperties: "User,Villa");
+            Booking bookingFromDb = _bookingService.GetBookingById(bookingId);
             if(bookingFromDb.Status == SD.StatusPending)
             {
                 //From Pending order check if the payment was successful
@@ -126,9 +134,8 @@ namespace ResortManagement.Web.Controllers
 
                 if(session.PaymentStatus == "paid")
                 {
-                    _unitOfWork.Booking.UpdateStatus(bookingFromDb.ID, SD.StatusApproved,0);
-                    _unitOfWork.Booking.UpdateStripePaymentID(bookingFromDb.ID, session.Id, session.PaymentIntentId);
-                    _unitOfWork.Booking.Save();
+                    _bookingService.UpdateStatus(bookingFromDb.ID, SD.StatusApproved,0);
+                    _bookingService.UpdateStripePaymentID(bookingFromDb.ID, session.Id, session.PaymentIntentId); 
                 }
             }
 
@@ -139,7 +146,7 @@ namespace ResortManagement.Web.Controllers
         public IActionResult BookingDetails(int bookingId)
         {
             // Retrieve the booking details with related User and Villa
-            Booking bookingDetail = _unitOfWork.Booking.Get(b => b.ID == bookingId, includeProperties: "User,Villa");
+            Booking bookingDetail = _bookingService.GetBookingById(bookingId);
 
             // Check if the booking is approved and no villa number is assigned
             if (bookingDetail.VillaNumber == 0 && bookingDetail.Status == SD.StatusApproved)
@@ -148,7 +155,7 @@ namespace ResortManagement.Web.Controllers
                 var availableVillaNumber = AssignAvailableVillaNumberByVilla(bookingDetail.VillaID);
 
                 // Filter villa numbers in memory
-                var allVillaNumbers = _unitOfWork.VillaNumber.GetAll(vn => vn.VillaID == bookingDetail.VillaID).ToList();
+                var allVillaNumbers = _villaNumberService.GetAllVillaNumbers().Where(vn => vn.VillaID == bookingDetail.VillaID).ToList();
                 bookingDetail.villaNumbers = allVillaNumbers
                     .Where(vn => availableVillaNumber.Contains(vn.Villa_Number))
                     .ToList();
@@ -168,7 +175,7 @@ namespace ResortManagement.Web.Controllers
             using FileStream fileStream = new FileStream(dataPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             wordDocument.Open(fileStream, FormatType.Automatic);
             //Update the template
-            Booking bookingFromDb = _unitOfWork.Booking.Get(u => u.ID == id, includeProperties: "User,Villa");
+            Booking bookingFromDb = _bookingService.GetBookingById(id);
             //Username
             TextSelection textSelection = wordDocument.Find("xx_customer_name", false, true);
             WTextRange textRange = textSelection.GetAsOneRange();
@@ -285,9 +292,8 @@ namespace ResortManagement.Web.Controllers
         private List<int> AssignAvailableVillaNumberByVilla (int villaId)
         {
             List<int> availableVillaNumbers = new();
-            var villaNumbers = _unitOfWork.VillaNumber.GetAll(vn => vn.VillaID == villaId);
-            var checkedInVilla = _unitOfWork.Booking.GetAll(vn => vn.VillaID == villaId && vn.Status == SD.StatusCheckedIn)
-                .Select(vn => vn.VillaNumber);
+            var villaNumbers = _villaNumberService.GetAllVillaNumbers().Where(vn => vn.VillaID == villaId);
+            var checkedInVilla = _bookingService.GetCheckedInVillaNumbers(villaId);
             foreach(var villaNumber in villaNumbers)
             {
                 if (!checkedInVilla.Contains(villaNumber.Villa_Number))
@@ -302,8 +308,7 @@ namespace ResortManagement.Web.Controllers
         [Authorize(Roles =SD.Role_Admin)]
         public IActionResult CheckIn(Booking booking)
         {
-            _unitOfWork.Booking.UpdateStatus(booking.ID, SD.StatusCheckedIn, booking.VillaNumber);
-            _unitOfWork.Booking.Save();
+            _bookingService.UpdateStatus(booking.ID, SD.StatusCheckedIn, booking.VillaNumber);
             TempData["success"] = "Booking Status Updated to Checked In!";
             return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.ID });
         }
@@ -312,8 +317,7 @@ namespace ResortManagement.Web.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public IActionResult CheckOut(Booking booking)
         {
-            _unitOfWork.Booking.UpdateStatus(booking.ID, SD.StatusCheckedOut, booking.VillaNumber);
-            _unitOfWork.Booking.Save();
+            _bookingService.UpdateStatus(booking.ID, SD.StatusCheckedOut, booking.VillaNumber);
             TempData["success"] = "Booking Status Updated to Check Out!";
             return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.ID });
         }
@@ -322,8 +326,13 @@ namespace ResortManagement.Web.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public IActionResult CancelBooking(Booking booking)
         {
-            _unitOfWork.Booking.UpdateStatus(booking.ID, SD.StatusCancelled, 0);
-            _unitOfWork.Booking.Save();
+            if(booking.Status == SD.StatusApproved)
+            {
+                _bookingService.UpdateStatus(booking.ID, SD.StatusRefunded, 0);
+                TempData["success"] = "Booking Status updated to Refunded!";
+                return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.ID });
+            }
+            _bookingService.UpdateStatus(booking.ID, SD.StatusCancelled, 0);
             TempData["success"] = "Booking Status updated to Cancelled!";
             return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.ID });
         }
@@ -336,16 +345,14 @@ namespace ResortManagement.Web.Controllers
             IEnumerable<Booking> bookingObject;
             if (User.IsInRole(SD.Role_Admin))
             {
-                bookingObject = _unitOfWork.Booking.GetAll(includeProperties: "User,Villa");
+                bookingObject = _bookingService.GetAllBookings();
             }
             else
             {
                 //Get logged in User ID
                 var claimsIdentity = (ClaimsIdentity)User.Identity;
                 var userID = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
-
-                //Get all the Booking specific to the user
-                bookingObject = _unitOfWork.Booking.GetAll(b => b.UserID == userID, includeProperties: "User,Villa");
+                bookingObject = _bookingService.GetAllBookings(userID);
             }
             if (!string.IsNullOrEmpty(status))
             {
